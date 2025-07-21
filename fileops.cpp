@@ -1,9 +1,16 @@
 #include <iostream>
 #include <stack>
+#include <string>
 #include "template.h"
 
-Folder* FileSystem::changeDirectory(string path, Folder* currentPath, bool* status) {
-  string folder=""; 
+bool validate(string name) {
+  for(int i=0;i<name.length();i++) 
+    if(name[i]==' ' || name[i]=='$' || name[i]=='%') return false;
+  return true;
+}
+
+void FileSystem::changeDirectory(string path, bool* status) {
+  string folder="", oripath=pathName; 
   Folder* original=currentPath;
   *status=true;
 
@@ -11,23 +18,64 @@ Folder* FileSystem::changeDirectory(string path, Folder* currentPath, bool* stat
     if(path[i]!='/')
       folder.push_back(path[i]);
     else {
-      if(folder=="..")
-        currentPath=currentPath->parent;
-      else if(folder=="~")
+      if(folder=="..") {
+        if(currentPath->parent==nullptr) *status=false;
+        else {
+          currentPath=currentPath->parent;
+          int n=pathName.length();
+          while(pathName[n-1]!='/') {
+            pathName.pop_back();
+            n=pathName.length();
+          }
+          pathName.pop_back();
+        }
+      }
+      else if(folder=="~") {
         currentPath=root;
-      else if(currentPath->children[folder]!=nullptr)
+        pathName=name;
+      }
+      else if(currentPath->children[folder]!=nullptr) {
         currentPath=currentPath->children[folder];
+        pathName=pathName+'/'+folder;
+      }
       else if(currentPath->children[folder]==nullptr)
         *status=false;
 
       folder="";
-    }
+    }    
   }
-  if(*status==false) return original;
-  return currentPath;
+  if(folder!="" && *status) {
+      if(folder=="..") {
+        if(currentPath->parent==nullptr) *status=false;
+        else {
+          currentPath=currentPath->parent;
+          int n=pathName.length();
+          while(pathName[n-1]!='/') {
+            pathName.pop_back();
+            n=pathName.length();
+          }
+          pathName.pop_back();
+        }
+      }
+      else if(folder=="~") {
+        currentPath=root;
+        pathName=name;
+      }
+      else if(currentPath->children[folder]!=nullptr) {
+        currentPath=currentPath->children[folder];
+        pathName=pathName+'/'+folder;
+      }
+      else if(currentPath->children[folder]==nullptr)
+        *status=false;
+    }
+  if(*status==false) {
+    currentPath=original;
+    pathName=oripath;
+  }
+  
 }
 
-void FileSystem::createDirectories(vector<string> names, Folder* currentPath) {
+void FileSystem::createDirectories(vector<string> names) {
   stack<string> invalids;
 
   for(int i=0;i<names.size();i++) {
@@ -46,7 +94,7 @@ void FileSystem::createDirectories(vector<string> names, Folder* currentPath) {
   }
 }
 
-void FileSystem::createFiles(vector<string> names, Folder* currentPath) {
+void FileSystem::createFiles(vector<string> names) {
   stack<string> invalids;
 
   for(int i=0;i<names.size();i++) {
@@ -69,14 +117,14 @@ void FileSystem::deleteDirectory(Folder* curr) {
     for(auto& pair: curr->children)
       deleteDirectory(pair.second);
     for(auto& pair: curr->files)
-      pair.second=null;
+      pair.second=false;
 
     curr->parent=nullptr;
     delete curr;
   }
 }
 
-void FileSystem::deleteDirectories(vector<string> names, Folder* currentPath) {
+void FileSystem::deleteDirectories(vector<string> names) {
   stack<string> invalid;
 
   for(int i=0;i<names.size();i++) {
@@ -85,17 +133,17 @@ void FileSystem::deleteDirectories(vector<string> names, Folder* currentPath) {
       invalid.push(name);
     else {
       deleteDirectory(currentPath->children[name]);
-      currentPath->children[name]=nullptr;
+      currentPath->children.erase(name);
     }
   }
 
-  while(!invalids.empty()) {
-    cout<<"FatalError: "<<invalids.top()<<" - Directory not found!!";
-    invalids.pop();
+  while(!invalid.empty()) {
+    cout<<"FatalError: "<<invalid.top()<<" - Directory not found!!";
+    invalid.pop();
   }
 }
 
-void FileSystem::deleteFiles(vector<string> names, Folder* currentPath) {
+void FileSystem::deleteFiles(vector<string> names) {
   stack<string> invalid;
 
   for(int i=0;i<names.size();i++) {
@@ -103,16 +151,16 @@ void FileSystem::deleteFiles(vector<string> names, Folder* currentPath) {
     if(currentPath->files[name]==false)
       invalid.push(name);
     else 
-      currentPath->files[name]=false;
+      currentPath->files.erase(name);
   }
 
-  while(!invalids.empty()) {
-    cout<<"FatalError: "<<invalids.top()<<" - File not found!!";
-    invalids.pop();
+  while(!invalid.empty()) {
+    cout<<"FatalError: "<<invalid.top()<<" - File not found!!";
+    invalid.pop();
   }
 }
 
-void FileSystem::listDirectory(Folder* currentPath) {
+void FileSystem::listDirectory() {
   for(auto& pair: currentPath->children)
     cout<<"/"<<pair.first<<endl;
   for(auto& pair: currentPath->files)

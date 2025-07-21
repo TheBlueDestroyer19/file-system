@@ -1,5 +1,6 @@
 #include <vector>
 #include <unordered_map>
+#include <string>
 using namespace std;
 
 
@@ -11,41 +12,38 @@ public:
   unordered_map<string, bool> files;
 };
 
-bool validate(string);
-
-
 //File System Class
 class FileSystem{
   Folder* root;
+  Folder* currentPath;
   string name;
+  string pathName;
 
 public:
-  Folder(string name="root") {
+  FileSystem(string name="root") {
     root=new Folder;
     this->name=name;
     root->parent=nullptr;
+    currentPath=root;
+    pathName="/"+name;
   }
-
-  Folder* changeDirectory(string path, Folder* currentPath, bool* status);
+  
+  string getPath() {return pathName;}
+  void changeDirectory(string path, bool* status);
   void deleteDirectory(Folder* current); //Recursive deletion
-  void deleteDirectories(vector<string> name, Folder* currentPath);
-  void createDirectories(vector<string> name, Folder* currentPath);
-  void createFiles(vector<string> name, Folder* currentPath);
-  void listDirectory(Folder* currentPath);
-  void deleteFiles(vector<string> names, Folder* currentPath);
+  void deleteDirectories(vector<string> name);
+  void createDirectories(vector<string> name);
+  void createFiles(vector<string> name);
+  void listDirectory();
+  void deleteFiles(vector<string> names);
+  void parseCommand(string cmd);
   //void copyFile
   //void cutFile
   //void copyDirectory
   //void cutDirectory
   
-  ~Folder() {
+  ~FileSystem() {
     deleteDirectory(root);
   }
 };
 
-
-//Interface for the file system
-class Interface{
-public:
-
-};
